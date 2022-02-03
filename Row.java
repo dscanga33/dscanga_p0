@@ -4,15 +4,15 @@ import java.util.LinkedList;
 
 public class Row
 {
-    private int numCols;
-    private LinkedList<String> colNames;
-    private LinkedList<String> values;
+    private int numCols; //number of columns in the row
+    private LinkedList<String> colNames;//names of each column
+    private LinkedList<String> values;//the value of each column
 
     public Row(Entity table)
     {
-        colNames = table.getColumnNames();
-        numCols = colNames.size();
-        values = null; //Needed?
+        colNames = table.getColumnNames(); //All rows of the table have the same column names, but it is nicer to have this stored in rows for some functions
+        numCols = colNames.size();//number of columns is equal to the number of column names
+        values = new LinkedList<String>();//initialized as an empty LinkedList to avoid null pointer exceptions
     }
 
     public int getNumCols() {
@@ -44,7 +44,7 @@ public class Row
         String output ="";
         for (int i =0;i<numCols;i++)
         {
-            output+= values.get(i)+"\n";
+            output+= values.get(i)+"\t";
         }
         return output;
     }

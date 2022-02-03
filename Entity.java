@@ -4,19 +4,35 @@ import java.util.LinkedList;
 
 public class Entity
 {
-    private String name;
-    //private int numCol; ?
-    private LinkedList<String> columnNames;
-    private LinkedList<String> columnDataTypes; //will this get used?
-    private LinkedList<Row> rows;
-    //rows should be used to store the data from the table, could be its own class?
+    private String name; //Table name
+    private LinkedList<String> columnNames;//All column names
+    private LinkedList<String> columnData;//Data type stored in each column
+    private LinkedList<Boolean> isPrimary; // Not yet implemented, but will have the value True where the column with the primary key is
+    private LinkedList<Row> rows; //All data stored in the table is stored in individual rows
 
 
     public Entity(String name)
     {
         this.name = name;
-        columnNames = EntitiesSQL.getColumnNames(name);
-        columnDataTypes = EntitiesSQL.getColumnData(name);
+        this.columnNames = EntitiesSQL.getColumnNames(name);
+        this.columnData = EntitiesSQL.getColumnData(name);
+        rows = EntitiesSQL.setRows(this);//set rows takes an Entity so the existing entity is passed
+    }
+
+    public LinkedList<String> getColumnData() {
+        return columnData;
+    }
+
+    public void setColumnData(LinkedList<String> columnData) {
+        this.columnData = columnData;
+    }
+
+    public LinkedList<Boolean> getIsPrimary() {
+        return isPrimary;
+    }
+
+    public void setIsPrimary(LinkedList<Boolean> isPrimary) {
+        this.isPrimary = isPrimary;
     }
 
     public String getName() {
@@ -35,14 +51,6 @@ public class Entity
         this.columnNames = columnNames;
     }
 
-    public LinkedList<String> getColumnDataTypes() {
-        return columnDataTypes;
-    }
-
-    public void setColumnDataTypes(LinkedList<String> columnDataTypes) {
-        this.columnDataTypes = columnDataTypes;
-    }
-
     public LinkedList<Row> getRows() {
         return rows;
     }
@@ -53,14 +61,15 @@ public class Entity
 
     public String toString()
     {
-        String output = "Table name:"+this.name +"\n";
-                for(int i = 0;i<columnNames.size();)
+        String output = "Table name:  "+this.name +"\n";
+                for(int i = 0;i < columnNames.size();i++)
                 {
                     output+=columnNames.get(i)+"\t";
                 }
+                output+="\n";
                 for(int i =0;i< rows.size();i++)
                 {
-                    output+=rows.get(i);
+                    output+=rows.get(i)+"\n";
                 }
                 return output;
     }
