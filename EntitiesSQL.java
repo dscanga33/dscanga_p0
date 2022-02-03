@@ -99,15 +99,7 @@ public class EntitiesSQL
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
-            while (rs.next())
-            {
-                Row newRow = new Row(table);
-                for(int i = 1;i<newRow.getNumCols()+1;i++) {
-                    newRow.getValues().add(rs.getString(i));
-                }
-                rows.add(newRow);
-            }
-            return rows;
+            return buildRows(table, rows, rs);
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
@@ -115,32 +107,60 @@ public class EntitiesSQL
 
     }
 
+    private static LinkedList buildRows(Entity table, LinkedList rows, ResultSet rs) throws SQLException {
+        while (rs.next())
+        {
+            Row newRow = new Row(table);
+            for(int i = 1;i<newRow.getNumCols()+1;i++) {
+                newRow.getValues().add(rs.getString(i));
+            }
+            rows.add(newRow);
+        }
+        return rows;
+    }
+
     /**
      * Inserts a new row into the requested table with the data defined
      * @param table The target table
-     * @param data All data to be inserted, in order (not implemented)
-     * @return returns the new row that was created (not yet implemented)
+     * @param data All data to be inserted, in order
+     * @return returns the new row that was created
      */
     public static Row insertRow(Entity table, LinkedList<String> data)
     {
-        String sql = "Insert Into "+table.getName();
+        String sql = "INSERT INTO "+table.getName() +" VALUES (";
         for(int i =0;i<table.getColumnNames().size();i++)
         {
-            if(table.getColumnData().get(i)=="integer" && table.getIsPrimary().get(i))
+            if(table.getColumnData().get(i)=="integer" && table.getIsPrimary().get(i))//using default for primary keys that are numbers
             {
                 sql+=" default";
             }
             else {
                 sql += " ?";
             }
+            if(i!=table.getColumnNames().size()-1)//Inserting a comma if it is not the last column
+            {
+                sql+=",";
+            }
         }
         Connection conn = JDBCConnection.getConnection();
-
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
+
+            //setting data to be inserted
+            int x = 0; //needed to increment data inside the for loop as it is not 1 indexed like PreparedStatement
+            for(int i =1;i<=table.getColumnNames().size();i++) //<= used here because PreparedStatement is 1 indexed
+            {
+                ps.setString(i,data.get(x));
+                x++;//incrementing x
+            }
             ResultSet rs = ps.executeQuery();
 
-            return null;//FIX
+            Row newRow = new Row(table);
+            for(int i = 1;i<newRow.getNumCols()+1;i++) {
+                newRow.getValues().add(rs.getString(i));
+            }
+
+            return newRow;
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
