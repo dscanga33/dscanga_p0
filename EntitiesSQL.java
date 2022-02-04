@@ -107,6 +107,19 @@ public class EntitiesSQL
 
     }
 
+    private static Row buildRow(Entity table, ResultSet rs)
+    {
+        Row newRow = new Row(table);
+        for(int i = 1;i<newRow.getNumCols()+1;i++) {
+            try {
+                newRow.getValues().add(rs.getString(i));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return newRow;
+    }
+
     private static LinkedList buildRows(Entity table, LinkedList rows, ResultSet rs) throws SQLException {
         while (rs.next())
         {
@@ -196,4 +209,94 @@ public class EntitiesSQL
             return -1;
         }
     }
+
+    public boolean deleteByPrimary(Entity table, String target)
+    {
+        String sql = "DELETE from "+table.getName()+" where "+table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+target;
+        Connection conn = JDBCConnection.getConnection();
+
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+            {
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public Row selectByPrimary(Entity table, String target)
+    {
+        for(Row r:table.getRows())
+        {
+            if(r.getValues().get(table.getPrimaryColumnIndex()).equals(target))
+            {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /**
+     *
+     * @param table table being updated
+     * @param newData Data to be updated, first value MUST be the primary key being updated, next values are values being changed
+     * @return returns newly updated row, returns null if an error occurs
+     */
+    public Row updateByPrimary(Entity table, LinkedList<String> newData)
+    {
+        //Setting up the sql statement
+        String sql = "UPDATE "+table.getName()+" SET ";
+        int newDataCounter=1;
+        //while there are still columns to be set and data to be set, keep looping
+        for (int i =0;i<table.getColumnNames().size()&&newDataCounter<newData.size();i++)
+        {
+            //skip inserting at primary key
+            if(i!= table.getPrimaryColumnIndex())
+            {
+                sql+= table.getColumnNames().get(i) +" = "+newData.get(newDataCounter);
+                newDataCounter++;
+                //add the , when not at the end
+                if(newDataCounter<newData.size()&&i+1<table.getColumnNames().size())
+                {
+                    sql+=", ";
+                }
+            }
+        }
+        //setting the sql statement to update at the requested id
+        sql+= "WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
+        Connection conn = JDBCConnection.getConnection();
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.executeQuery();
+            //no result set used here because it does not return any results for this query
+
+            //updating the ORM with the new data
+            sql = "SELECT * FROM "+table.getName()+"WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
+            ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+            {
+                Row newRow = buildRow(table,rs);
+                //finding the row to be updated
+                for(int i=0;i<table.getRows().size();i++)
+                {
+                    if(table.getRows().get(i).getValues().get(table.getPrimaryColumnIndex()).equals(newData.get(0)))
+                    {
+                        //updating the row to the new data
+                        table.getRows().set(i,newRow);
+                    }
+                }
+                return newRow;
+            }
+            return null;//if the data can't be found for whatever reason null is returned
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 }
