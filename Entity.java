@@ -7,7 +7,7 @@ public class Entity
     private String name; //Table name
     private LinkedList<String> columnNames;//All column names
     private LinkedList<String> columnData;//Data type stored in each column
-    private LinkedList<Boolean> isPrimary; // Not yet implemented, but will have the value True where the column with the primary key is
+    private int primaryColumnIndex; //The index of the column where the primary key is, -1 if none exists which could be used to deny any requests to perform any functions by id
     private LinkedList<Row> rows; //All data stored in the table is stored in individual rows
 
 
@@ -16,6 +16,7 @@ public class Entity
         this.name = name;
         this.columnNames = EntitiesSQL.getColumnNames(name);
         this.columnData = EntitiesSQL.getColumnData(name);
+        this.primaryColumnIndex = EntitiesSQL.getPrimaryColumn(this);
         rows = EntitiesSQL.setRows(this);//set rows takes an Entity so the existing entity is passed
     }
 
@@ -27,12 +28,12 @@ public class Entity
         this.columnData = columnData;
     }
 
-    public LinkedList<Boolean> getIsPrimary() {
-        return isPrimary;
+    public int getPrimaryColumnIndex() {
+        return primaryColumnIndex;
     }
 
-    public void setIsPrimary(LinkedList<Boolean> isPrimary) {
-        this.isPrimary = isPrimary;
+    public void setPrimaryColumnIndex(int primaryColumnIndex) {
+        this.primaryColumnIndex = primaryColumnIndex;
     }
 
     public String getName() {

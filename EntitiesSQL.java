@@ -130,7 +130,7 @@ public class EntitiesSQL
         String sql = "INSERT INTO "+table.getName() +" VALUES (";
         for(int i =0;i<table.getColumnNames().size();i++)
         {
-            if(table.getColumnData().get(i)=="integer" && table.getIsPrimary().get(i))//using default for primary keys that are numbers
+            if(table.getColumnData().get(i)=="integer" && i==table.getPrimaryColumnIndex())//using default for primary keys that are numbers
             {
                 sql+=" default";
             }
@@ -164,6 +164,36 @@ public class EntitiesSQL
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    /**
+     * This method finds the column that the primary key is located in and returns the index as an int
+     * @param table the table being searched
+     * @return returns the index of the found primary key, or -1 if none is found
+     */
+    public static int getPrimaryColumn(Entity table)
+    {
+        //This extremely long sql statement returns the column name where the primary key is
+        String sql = "SELECT pg_attribute.attname, format_type(pg_attribute.atttypid, pg_attribute.atttypmod) FROM pg_index, pg_class, pg_attribute, pg_namespace WHERE pg_class.oid = '"+table.getName()+"'::regclass AND indrelid = pg_class.oid AND nspname = '"+SCHEMA_NAME+"' AND pg_class.relnamespace = pg_namespace.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimaryg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary;";
+        Connection conn = JDBCConnection.getConnection();
+
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            String primaryCol = rs.getString(1);
+            for (int i =0; i <table.getColumnNames().size();i++)
+            {
+                if(primaryCol.equals(table.getColumnNames().get(i)));
+                {
+                    return i;
+                }
+            }
+            return -1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
         }
     }
 }
