@@ -210,22 +210,25 @@ public class EntitiesSQL
         }
     }
 
-    public boolean deleteByPrimary(Entity table, String target)
+    public void deleteByPrimary(Entity table, String target)
     {
         String sql = "DELETE from "+table.getName()+" where "+table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+target;
         Connection conn = JDBCConnection.getConnection();
 
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next())
+            ps.executeQuery();
+
+            for(int i=0;i<table.getRows().size();i++)
             {
-                return true;
+                if(table.getRows().get(i).getValues().get(table.getPrimaryColumnIndex()).equals(target))
+                {
+                    //updating the row to the new data
+                    table.getRows().remove(i);
+                }
             }
-            return false;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
     }
     public Row selectByPrimary(Entity table, String target)
