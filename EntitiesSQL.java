@@ -5,6 +5,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedList;
 
+/*
+Add selectByColumnName, deleteByColumnName, updateByColumnName, and displayColumnNames
+ */
+
 public class EntitiesSQL
 {
     private static final String SCHEMA_NAME = "public"; //Name of the schema being used
@@ -294,6 +298,118 @@ public class EntitiesSQL
                     }
                 }
                 return newRow;
+            }
+            return null;//if the data can't be found for whatever reason null is returned
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static LinkedList<Row> selectByColumn(Entity table,String colName, String target)
+    {
+        int colNum = getColNum(table, colName);
+        if(colNum==-1)
+        {
+            return null;
+        }
+        else {
+            LinkedList<Row> selectedRows = new LinkedList<>();
+            for (Row r : table.getRows()) {
+                if (r.getValues().get(colNum).equals(target)) {
+                    selectedRows.add(r);
+                }
+            }
+            return selectedRows;
+        }
+    }
+
+    private static int getColNum(Entity table, String colName) {
+        for(int i = 0; i< table.getColumnNames().size(); i++) {
+            if (table.getColumnNames().get(i).equals(colName)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void deleteByColumn(Entity table,String colName,String target)
+    {
+        String sql = "DELETE from "+table.getName()+" where "+colName+" = "+target;
+        Connection conn = JDBCConnection.getConnection();
+
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.executeQuery();
+            int colNum = getColNum(table, colName);
+            for(int i=0;i<table.getRows().size();i++)
+            {
+                if(table.getRows().get(i).getValues().get(colNum).equals(target))
+                {
+                    table.getRows().remove(i);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     *
+     * @param table table being updated
+     * @param colName column being updating on
+     * @param newData Data to be updated, first value MUST be the column value being updated, next values are values being changed
+     * @return returns LinkedList of updated rows, returns null if an error occurs
+     */
+    public LinkedList<Row> updateByColumn(Entity table, String colName, LinkedList<String> newData)
+    {
+        //Setting up the sql statement
+        String sql = "UPDATE "+table.getName()+" SET ";
+        int newDataCounter=1;
+        //while there are still columns to be set and data to be set, keep looping
+        for (int i =0;i<table.getColumnNames().size()&&newDataCounter<newData.size();i++)
+        {
+            //skip inserting at primary key
+            if(i!= table.getPrimaryColumnIndex())
+            {
+                sql+= table.getColumnNames().get(i) +" = "+newData.get(newDataCounter);
+                newDataCounter++;
+                //add the , when not at the end
+                if(newDataCounter<newData.size()&&i+1<table.getColumnNames().size())
+                {
+                    sql+=", ";
+                }
+            }
+        }
+        //setting the sql statement to update at the requested id
+        sql+= "WHERE " +colName+" = "+ newData.get(0);
+        Connection conn = JDBCConnection.getConnection();
+
+        int colNum = getColNum(table,colName);
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.executeQuery();
+            //no result set used here because it does not return any results for this query
+
+            //updating the ORM with the new data
+            sql = "SELECT * FROM "+table.getName()+"WHERE " +table.getColumnNames().get(colNum)+" = "+ newData.get(0);
+            ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            LinkedList<Row> updatedRows = new LinkedList<>();
+            while (rs.next())
+            {
+                //finding the rows to be updated
+                for(int i=0;i<table.getRows().size();i++)
+                {
+                    if(table.getRows().get(i).getValues().get(colNum).equals(newData.get(0)))
+                    {
+                        Row newRow = buildRow(table,rs);
+                        //updating the row to the new data
+                        table.getRows().set(i,newRow);
+                        updatedRows.add(newRow);
+                    }
+                }
+                return updatedRows;
             }
             return null;//if the data can't be found for whatever reason null is returned
         } catch (SQLException e) {
