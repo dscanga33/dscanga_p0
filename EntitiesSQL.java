@@ -147,7 +147,7 @@ public class EntitiesSQL
         String sql = "INSERT INTO "+table.getName() +" VALUES (";
         for(int i =0;i<table.getColumnNames().size();i++)
         {
-            if(table.getColumnData().get(i)=="integer" && i==table.getPrimaryColumnIndex())//using default for primary keys that are numbers
+            if(i==table.getPrimaryColumnIndex())//using default for primary keys that are numbers
             {
                 sql+=" default";
             }
@@ -159,24 +159,44 @@ public class EntitiesSQL
                 sql+=",";
             }
         }
+        sql+=") returning *";
         Connection conn = JDBCConnection.getConnection();
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
 
             //setting data to be inserted
+            int checkNum = 0;
             int x = 0; //needed to increment data inside the for loop as it is not 1 indexed like PreparedStatement
-            for(int i =1;i<=table.getColumnNames().size();i++) //<= used here because PreparedStatement is 1 indexed
+            for(int i =1;i<=table.getColumnNames().size()&&x<data.size();i++) //<= used here because PreparedStatement is 1 indexed
             {
-                ps.setString(i,data.get(x));
+                if (checkNum == table.getPrimaryColumnIndex())
+                {
+                    checkNum++;
+                }
+
+                if(table.getColumnData().get(checkNum).equals("character varying")||table.getColumnData().get(checkNum).equals("character")) {
+                    ps.setString(i, data.get(x));
+                }
+                else if(table.getColumnData().get(checkNum).equals("integer") || table.getColumnData().get(checkNum).equals("number"))
+                {
+                    ps.setInt(i,Integer.parseInt(data.get(x)));
+                }
+                else if(table.getColumnData().get(checkNum).equals("boolean"))
+                {
+                    ps.setBoolean(i,Boolean.parseBoolean(data.get(x)));
+                }
                 x++;//incrementing x
+                checkNum++;
             }
             ResultSet rs = ps.executeQuery();
 
             Row newRow = new Row(table);
             for(int i = 1;i<newRow.getNumCols()+1;i++) {
-                newRow.getValues().add(rs.getString(i));
+                if(rs.next()) {
+                    newRow.getValues().add(rs.getString(i));
+                }
             }
-
+            table.getRows().add(newRow);
             return newRow;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -192,29 +212,30 @@ public class EntitiesSQL
     public static int getPrimaryColumn(Entity table)
     {
         //This extremely long sql statement returns the column name where the primary key is
-        String sql = "SELECT pg_attribute.attname, format_type(pg_attribute.atttypid, pg_attribute.atttypmod) FROM pg_index, pg_class, pg_attribute, pg_namespace WHERE pg_class.oid = '"+table.getName()+"'::regclass AND indrelid = pg_class.oid AND nspname = '"+SCHEMA_NAME+"' AND pg_class.relnamespace = pg_namespace.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimaryg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary;";
+        String sql = "SELECT Col.Column_Name from INFORMATION_SCHEMA.TABLE_CONSTRAINTS Tab, INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE Col WHERE Col.Constraint_Name = Tab.Constraint_Name AND Col.Table_Name = Tab.Table_Name AND Constraint_Type = 'PRIMARY KEY' AND Col.Table_Name = '"+table.getName()+"'";
         Connection conn = JDBCConnection.getConnection();
 
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
 
-            String primaryCol = rs.getString(1);
-            for (int i =0; i <table.getColumnNames().size();i++)
-            {
-                if(primaryCol.equals(table.getColumnNames().get(i)));
-                {
-                    return i;
+            if(rs.next()){
+                String primaryCol = rs.getString("column_name");
+                for (int i = 0; i < table.getColumnNames().size(); i++) {
+                    if (primaryCol.equals(table.getColumnNames().get(i))) ;
+                    {
+                        return i;
+                    }
                 }
-            }
-            return -1;
+
+            }return -1;
         } catch (SQLException e) {
             e.printStackTrace();
             return -1;
         }
     }
 
-    public void deleteByPrimary(Entity table, String target)
+    public static void deleteByPrimary(Entity table, String target)
     {
         String sql = "DELETE from "+table.getName()+" where "+table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+target;
         Connection conn = JDBCConnection.getConnection();
@@ -235,7 +256,7 @@ public class EntitiesSQL
             e.printStackTrace();
         }
     }
-    public Row selectByPrimary(Entity table, String target)
+    public static Row selectByPrimary(Entity table, String target)
     {
         for(Row r:table.getRows())
         {
@@ -253,7 +274,7 @@ public class EntitiesSQL
      * @param newData Data to be updated, first value MUST be the primary key being updated, next values are values being changed
      * @return returns newly updated row, returns null if an error occurs
      */
-    public Row updateByPrimary(Entity table, LinkedList<String> newData)
+    public static Row updateByPrimary(Entity table, LinkedList<String> newData)
     {
         //Setting up the sql statement
         String sql = "UPDATE "+table.getName()+" SET ";
@@ -333,7 +354,7 @@ public class EntitiesSQL
         return -1;
     }
 
-    public void deleteByColumn(Entity table,String colName,String target)
+    public static void deleteByColumn(Entity table,String colName,String target)
     {
         String sql = "DELETE from "+table.getName()+" where "+colName+" = "+target;
         Connection conn = JDBCConnection.getConnection();
@@ -361,7 +382,7 @@ public class EntitiesSQL
      * @param newData Data to be updated, first value MUST be the column value being updated, next values are values being changed
      * @return returns LinkedList of updated rows, returns null if an error occurs
      */
-    public LinkedList<Row> updateByColumn(Entity table, String colName, LinkedList<String> newData)
+    public static LinkedList<Row> updateByColumn(Entity table, String colName, LinkedList<String> newData)
     {
         //Setting up the sql statement
         String sql = "UPDATE "+table.getName()+" SET ";
@@ -416,6 +437,11 @@ public class EntitiesSQL
             e.printStackTrace();
             return null;
         }
+    }
+
+    public static String selectAll(Entity table)
+    {
+        return table.toString();
     }
 
 }

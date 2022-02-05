@@ -20,4 +20,16 @@ public class Entities
     {
         return tableNames;
     }
+
+    public Entity getTableByName(String tableName)
+    {
+        for(Entity table:tableNames)
+        {
+            if(table.getName().equals(tableName))
+            {
+                return table;
+            }
+        }
+        return null;
+    }
 }
