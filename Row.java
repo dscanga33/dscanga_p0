@@ -42,7 +42,7 @@ public class Row
     public String toString()
     {
         String output ="";
-        for (int i =0;i<numCols;i++)
+        for (int i =0;i< values.size();i++)
         {
             output+= values.get(i)+"\t";
         }

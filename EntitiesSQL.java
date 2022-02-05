@@ -191,8 +191,9 @@ public class EntitiesSQL
             ResultSet rs = ps.executeQuery();
 
             Row newRow = new Row(table);
+            if(rs.next()) {
             for(int i = 1;i<newRow.getNumCols()+1;i++) {
-                if(rs.next()) {
+
                     newRow.getValues().add(rs.getString(i));
                 }
             }
@@ -242,7 +243,7 @@ public class EntitiesSQL
 
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.executeQuery();
+            ps.executeUpdate();
 
             for(int i=0;i<table.getRows().size();i++)
             {
@@ -285,7 +286,9 @@ public class EntitiesSQL
             //skip inserting at primary key
             if(i!= table.getPrimaryColumnIndex())
             {
-                sql+= table.getColumnNames().get(i) +" = "+newData.get(newDataCounter);
+                if(!table.getColumnData().get(i).equals("character varying")) {
+                    sql += table.getColumnNames().get(i) + " = " + newData.get(newDataCounter);
+                } else sql+=table.getColumnNames().get(i) + " = '" +newData.get(newDataCounter)+"'";
                 newDataCounter++;
                 //add the , when not at the end
                 if(newDataCounter<newData.size()&&i+1<table.getColumnNames().size())
@@ -295,15 +298,15 @@ public class EntitiesSQL
             }
         }
         //setting the sql statement to update at the requested id
-        sql+= "WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
+        sql+= " WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
         Connection conn = JDBCConnection.getConnection();
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.executeQuery();
+            ps.executeUpdate();
             //no result set used here because it does not return any results for this query
 
             //updating the ORM with the new data
-            sql = "SELECT * FROM "+table.getName()+"WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
+            sql = "SELECT * FROM "+table.getName()+" WHERE " +table.getColumnNames().get(table.getPrimaryColumnIndex())+" = "+ newData.get(0);
             ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
             if (rs.next())
@@ -356,13 +359,16 @@ public class EntitiesSQL
 
     public static void deleteByColumn(Entity table,String colName,String target)
     {
-        String sql = "DELETE from "+table.getName()+" where "+colName+" = "+target;
+        int colNum = getColNum(table,colName);
+        String sql = "DELETE from "+table.getName()+" where "+colName+" = ";
+        if(table.getColumnData().get(colNum).equals("character varying")) {
+            sql += "'" + target+"'";
+        } else sql+=target;
         Connection conn = JDBCConnection.getConnection();
 
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.executeQuery();
-            int colNum = getColNum(table, colName);
+            ps.executeUpdate();
             for(int i=0;i<table.getRows().size();i++)
             {
                 if(table.getRows().get(i).getValues().get(colNum).equals(target))
@@ -384,6 +390,7 @@ public class EntitiesSQL
      */
     public static LinkedList<Row> updateByColumn(Entity table, String colName, LinkedList<String> newData)
     {
+        int colNum = getColNum(table,colName);
         //Setting up the sql statement
         String sql = "UPDATE "+table.getName()+" SET ";
         int newDataCounter=1;
@@ -393,7 +400,12 @@ public class EntitiesSQL
             //skip inserting at primary key
             if(i!= table.getPrimaryColumnIndex())
             {
-                sql+= table.getColumnNames().get(i) +" = "+newData.get(newDataCounter);
+                sql+= table.getColumnNames().get(i) +" = ";
+                if(table.getColumnData().get(i).equals("character varying"))
+                {
+                    sql += "'"+newData.get(i)+"'";
+                }
+                else sql+=newData.get(i);
                 newDataCounter++;
                 //add the , when not at the end
                 if(newDataCounter<newData.size()&&i+1<table.getColumnNames().size())
@@ -403,17 +415,27 @@ public class EntitiesSQL
             }
         }
         //setting the sql statement to update at the requested id
-        sql+= "WHERE " +colName+" = "+ newData.get(0);
+        sql+= " WHERE " +colName+" = ";
+        if(table.getColumnData().get(colNum).equals("character varying"))
+        {
+            sql += "'"+newData.get(0)+"'";
+        }
+        else sql+=newData.get(0);
         Connection conn = JDBCConnection.getConnection();
 
-        int colNum = getColNum(table,colName);
+
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.executeQuery();
+            ps.executeUpdate();
             //no result set used here because it does not return any results for this query
 
             //updating the ORM with the new data
-            sql = "SELECT * FROM "+table.getName()+"WHERE " +table.getColumnNames().get(colNum)+" = "+ newData.get(0);
+            sql = "SELECT * FROM "+table.getName()+" WHERE " +table.getColumnNames().get(colNum)+" = ";
+            if(table.getColumnData().get(colNum).equals("character varying"))
+            {
+                sql += "'"+newData.get(colNum)+"'";
+            }
+            else sql+=newData.get(colNum);
             ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
             LinkedList<Row> updatedRows = new LinkedList<>();
