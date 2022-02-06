@@ -1,10 +1,15 @@
-package repo;
+package repo.Services;
+import repo.Entity;
+import repo.JDBCConnection;
+import repo.Row;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedList;
-
+import java.util.List;
+import java.util.stream.*;
 /*
 Add selectByColumnName, deleteByColumnName, updateByColumnName, and displayColumnNames
  */
@@ -257,18 +262,22 @@ public class EntitiesSQL
             e.printStackTrace();
         }
     }
+
     public static Row selectByPrimary(Entity table, String target)
     {
-        for(Row r:table.getRows())
-        {
-            if(r.getValues().get(table.getPrimaryColumnIndex()).equals(target))
-            {
-                return r;
-            }
-        }
-        return null;
+        return table.getRows().stream().filter(row -> row.getValues().get(table.getPrimaryColumnIndex()).equals(target)).collect(Collectors.toList()).get(0);
     }
-
+    public static LinkedList<Row> selectByColumn(Entity table, String colName, String target)
+    {
+        int colNum = getColNum(table, colName);
+        if(colNum==-1)
+        {
+            return null;
+        }
+        else {
+            return table.getRows().stream().filter(row -> row.getValues().get(colNum).equals(target)).collect(Collectors.toCollection(LinkedList::new));
+        }
+    }
     /**
      *
      * @param table table being updated
@@ -327,24 +336,6 @@ public class EntitiesSQL
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    public static LinkedList<Row> selectByColumn(Entity table,String colName, String target)
-    {
-        int colNum = getColNum(table, colName);
-        if(colNum==-1)
-        {
-            return null;
-        }
-        else {
-            LinkedList<Row> selectedRows = new LinkedList<>();
-            for (Row r : table.getRows()) {
-                if (r.getValues().get(colNum).equals(target)) {
-                    selectedRows.add(r);
-                }
-            }
-            return selectedRows;
         }
     }
 
